@@ -50,5 +50,16 @@ let r=b.id?get(owner,b.id):{tenderId:b.tenderId,quote:'',category:'Human review'
 for(const key of ['description','category','review','status','notes','evidenceId'])if(key in b)r[key]=b[key];required(r.description,5000);if(!['suggested','accepted','rejected'].includes(r.review)||!['pending','in progress','complete'].includes(r.status))throw Error('Invalid status');return send(200,save(owner,'requirement',r,b.id))}
 if(req.url==='/api/reset'){const u=db.prepare('SELECT email FROM users WHERE id=?').get(owner);if(!u.email.endsWith('@demo.invalid'))throw Error('Reset is only available for demo accounts');for(const e of [...all(owner,'evidence'),...all(owner,'document')])if(e.storage)fs.rmSync(path.join(dir,e.storage),{force:true});db.prepare('DELETE FROM records WHERE owner=?').run(owner);return send(200,{ok:true})}
 send(404,{error:'Unknown operation'});
-}catch(e){send(400,{error:e.message.includes('UNIQUE')?'Email already registered':e.message})}});return {server,db};}
+}catch(e){
+  console.error('Request failed:', e);
+  if (!res.headersSent) {
+    send(400, {
+      error: e.message?.includes('UNIQUE')
+        ? 'Email already registered'
+        : e.message || 'Request failed'
+    });
+  } else if (!res.writableEnded) {
+    res.end();
+  }
+}
 if(process.argv[1]===fileURLToPath(import.meta.url)){const {server}=createApp();server.listen(Number(process.env.PORT||3000),process.env.HOST||'127.0.0.1',()=>console.log('Tender Pilot local demo: http://localhost:'+ (process.env.PORT||3000)))}
